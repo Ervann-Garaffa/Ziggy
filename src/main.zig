@@ -4,6 +4,26 @@ const rl = @cImport({
     @cInclude("raymath.h");
 });
 
+const FRAME_WIDTH = 900;
+const FRAME_HEIGHT = FRAME_WIDTH;
+const FRAME_OFFSET = 20;
+const MENU_WIDTH = 200;
+const WINDOW_WIDTH = FRAME_WIDTH + 2 * FRAME_OFFSET + MENU_WIDTH;
+const WINDOW_HEIGHT = FRAME_HEIGHT + 2 * FRAME_OFFSET;
+
+const Button = struct {
+    body: rl.Rectangle,
+    name: []const u8,
+};
+
+pub fn nullTermString(input: []const u8) [32]u8 {
+    var text_buffer: [32]u8 = undefined;
+    const text_len = @min(text_buffer.len - 1, input.len);
+    std.mem.copyBackwards(u8, text_buffer[0..text_len], input[0..text_len]);
+    text_buffer[text_len] = 0;
+    return text_buffer;
+}
+
 const ship_shape: [6]rl.Vector2 = .{
     .{ .x = -5, .y = -4 },
     .{ .x = 5, .y = 0 },
@@ -22,7 +42,7 @@ const Ship = struct {
 
     fn init(self: *@This()) void {
         //self.body = ship_shape;
-        self.scale = 5;
+        self.scale = 2;
         self.rotation = 0;
         self.speed = .{ .x = 0.0, .y = 0 };
         self.position = .{ .x = 400, .y = 200 };
@@ -30,6 +50,13 @@ const Ship = struct {
 
     fn update(self: *@This()) void {
         self.position = rl.Vector2Add(self.position, self.speed);
+
+        // Boundaries checking
+        if (self.position.x < FRAME_OFFSET + 5 * self.scale) { self.position.x = FRAME_OFFSET + 5 * self.scale; } 
+        else if (self.position.x > FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale) { self.position.x = FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale; }
+        if (self.position.y < FRAME_OFFSET + 5 * self.scale) { self.position.y = FRAME_OFFSET + 5 * self.scale; } 
+        else if (self.position.y > FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale) { self.position.y = FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale; }        
+
         self.body = ship_shape;
         transformRLV2Slice(self.body[0..], self.scale, self.rotation, self.position);
     }
@@ -51,8 +78,9 @@ pub fn transformRLV2Slice(
 
 pub fn main() !void {
     rl.SetTraceLogLevel(rl.LOG_NONE);
-    rl.InitWindow(1200, 800, "Hello");
-    rl.SetTargetFPS(144);
+    rl.InitWindow(WINDOW_WIDTH,WINDOW_HEIGHT, "Hello");
+    defer rl.CloseWindow();
+    rl.SetTargetFPS(120);
 
     var ship: Ship = undefined;
     ship.init();
@@ -82,6 +110,9 @@ pub fn main() !void {
 
         ship.update();
         rl.ClearBackground(rl.BLACK);
+        rl.DrawRectangleLines(FRAME_OFFSET, FRAME_OFFSET, FRAME_WIDTH, FRAME_HEIGHT, rl.WHITE);
+        rl.DrawText("Score : ", WINDOW_WIDTH - MENU_WIDTH + 20, 20, 30, rl.WHITE);
+        
         rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
     }
 }

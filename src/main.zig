@@ -16,11 +16,18 @@ const Button = struct {
     name: []const u8,
 };
 
-pub fn nullTermString(input: []const u8) [32]u8 {
+pub fn textToNullTermString(input: []const u8) [32]u8 { // Useful for converting []u8 into useable strings for rl.DrawText
     var text_buffer: [32]u8 = undefined;
     const text_len = @min(text_buffer.len - 1, input.len);
     std.mem.copyBackwards(u8, text_buffer[0..text_len], input[0..text_len]);
     text_buffer[text_len] = 0;
+    return text_buffer;
+}
+
+pub fn uIntToNullTermString(input: u32) [32]u8 {
+    var text_buffer: [32]u8 = undefined;
+    const bytes_written = std.fmt.bufPrint(text_buffer[0..], "{}", .{input}) catch unreachable;
+    text_buffer[bytes_written.len] = 0;
     return text_buffer;
 }
 
@@ -52,10 +59,16 @@ const Ship = struct {
         self.position = rl.Vector2Add(self.position, self.speed);
 
         // Boundaries checking
-        if (self.position.x < FRAME_OFFSET + 5 * self.scale) { self.position.x = FRAME_OFFSET + 5 * self.scale; } 
-        else if (self.position.x > FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale) { self.position.x = FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale; }
-        if (self.position.y < FRAME_OFFSET + 5 * self.scale) { self.position.y = FRAME_OFFSET + 5 * self.scale; } 
-        else if (self.position.y > FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale) { self.position.y = FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale; }        
+        if (self.position.x < FRAME_OFFSET + 5 * self.scale) {
+            self.position.x = FRAME_OFFSET + 5 * self.scale;
+        } else if (self.position.x > FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale) {
+            self.position.x = FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale;
+        }
+        if (self.position.y < FRAME_OFFSET + 5 * self.scale) {
+            self.position.y = FRAME_OFFSET + 5 * self.scale;
+        } else if (self.position.y > FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale) {
+            self.position.y = FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale;
+        }
 
         self.body = ship_shape;
         transformRLV2Slice(self.body[0..], self.scale, self.rotation, self.position);
@@ -78,9 +91,10 @@ pub fn transformRLV2Slice(
 
 pub fn main() !void {
     rl.SetTraceLogLevel(rl.LOG_NONE);
-    rl.InitWindow(WINDOW_WIDTH,WINDOW_HEIGHT, "Hello");
+    rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Hello");
     defer rl.CloseWindow();
     rl.SetTargetFPS(120);
+    var fps: u32 = 0;
 
     var ship: Ship = undefined;
     ship.init();
@@ -111,8 +125,12 @@ pub fn main() !void {
         ship.update();
         rl.ClearBackground(rl.BLACK);
         rl.DrawRectangleLines(FRAME_OFFSET, FRAME_OFFSET, FRAME_WIDTH, FRAME_HEIGHT, rl.WHITE);
-        rl.DrawText("Score : ", WINDOW_WIDTH - MENU_WIDTH + 20, 20, 30, rl.WHITE);
-        
+        rl.DrawText("Score : ", WINDOW_WIDTH - MENU_WIDTH + 20, 20, 20, rl.WHITE);
+
+        rl.DrawText("FPS : ", WINDOW_WIDTH - MENU_WIDTH + 20, 60, 20, rl.WHITE);
+        fps = @intCast(rl.GetFPS());
+        rl.DrawText(&uIntToNullTermString(fps)[0], WINDOW_WIDTH - MENU_WIDTH + 80, 60, 20, rl.WHITE);
+
         rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
     }
 }

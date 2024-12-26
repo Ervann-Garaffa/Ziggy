@@ -42,7 +42,8 @@ const ship_shape: [6]rl.Vector2 = .{
 
 const Ship = struct {
     position: rl.Vector2,
-    speed: rl.Vector2,
+    direction: rl.Vector2,
+    speed: f32,
     rotation: f32,
     scale: f32,
     body: [6]rl.Vector2,
@@ -50,13 +51,14 @@ const Ship = struct {
     fn init(self: *@This()) void {
         //self.body = ship_shape;
         self.scale = 2;
+        self.speed = 1;
         self.rotation = 0;
-        self.speed = .{ .x = 0.0, .y = 0 };
+        self.direction = .{ .x = 0.0, .y = 0 };
         self.position = .{ .x = 400, .y = 200 };
     }
 
     fn update(self: *@This()) void {
-        self.position = rl.Vector2Add(self.position, self.speed);
+        self.position = rl.Vector2Add(self.position, self.direction);
 
         // Boundaries checking
         if (self.position.x < FRAME_OFFSET + 5 * self.scale) {
@@ -103,23 +105,24 @@ pub fn main() !void {
         rl.BeginDrawing();
         defer rl.EndDrawing();
 
-        ship.speed = rl.Vector2Zero();
+        ship.direction = rl.Vector2Zero();
         if (rl.IsKeyDown(rl.KEY_UP)) {
-            ship.speed = rl.Vector2Add(ship.speed, .{ .x = 0, .y = -1 });
+            ship.direction = rl.Vector2Add(ship.direction, .{ .x = 0, .y = -1 });
         }
         if (rl.IsKeyDown(rl.KEY_DOWN)) {
-            ship.speed = rl.Vector2Add(ship.speed, .{ .x = 0, .y = 1 });
+            ship.direction = rl.Vector2Add(ship.direction, .{ .x = 0, .y = 1 });
         }
         if (rl.IsKeyDown(rl.KEY_RIGHT)) {
-            ship.speed = rl.Vector2Add(ship.speed, .{ .x = 1, .y = 0 });
+            ship.direction = rl.Vector2Add(ship.direction, .{ .x = 1, .y = 0 });
         }
         if (rl.IsKeyDown(rl.KEY_LEFT)) {
-            ship.speed = rl.Vector2Add(ship.speed, .{ .x = -1, .y = 0 });
+            ship.direction = rl.Vector2Add(ship.direction, .{ .x = -1, .y = 0 });
         }
 
-        if (0 == rl.Vector2Equals(ship.speed, rl.Vector2Zero())) {
-            ship.speed = rl.Vector2Normalize(ship.speed);
-            ship.rotation = rl.Vector2Angle(rl.Vector2{ .x = 1, .y = 0 }, ship.speed);
+        // TODO : finish implementing separation between speed and direction
+        if (0 == rl.Vector2Equals(ship.direction, rl.Vector2Zero())) {
+            ship.direction = rl.Vector2Normalize(ship.direction);
+            ship.rotation = rl.Vector2Angle(rl.Vector2{ .x = 1, .y = 0 }, ship.direction);
         }
 
         ship.update();

@@ -77,6 +77,43 @@ const Ship = struct {
     }
 };
 
+const enemy_shape: [5]rl.Vector2 = .{
+    .{ .x = -5, .y = -5 },
+    .{ .x = -5, .y = 5 },
+    .{ .x = 5, .y = 5 },
+    .{ .x = 5, .y = -5 },
+    .{ .x = -5, .y = -5 },
+};
+
+const Enemy = struct {
+    position: rl.Vector2,
+    direction: rl.Vector2,
+    speed: f32,
+    rotation: f32,
+    scale: f32,
+    body: [5]rl.Vector2,
+
+    fn init() Enemy {
+        return .{
+            .scale = 1,
+            .speed = 2,
+            .rotation = 0,
+            .direction = .{ .x = 1, .y = 1 },
+            .position = .{ .x = 0, .y = 0 },
+            .body = enemy_shape,
+        };
+    }
+
+    fn update(self: *@This()) void {
+        self.position = rl.Vector2Add(self.position, self.direction);
+
+        // TODO : Boundaries checking external ?
+
+        self.body = enemy_shape;
+        transformRLV2Slice(self.body[0..], self.scale, self.rotation, self.position);
+    }
+};
+
 // YES! Array modification through slices without using a f*cking Allocator! Thanks again Claude
 pub fn transformRLV2Slice(
     points: []rl.Vector2, // Slice called same as an array but with unknown length : slice[0..]
@@ -98,8 +135,15 @@ pub fn main() !void {
     rl.SetTargetFPS(120);
     var fps: u32 = 0;
 
+    const globAlloc = std.heap.page_allocator;
+
     var ship: Ship = undefined;
     ship.init();
+
+    var enemies = std.ArrayList(Enemy).init(globAlloc);
+    defer enemies.deinit();
+
+    try enemies.append(Enemy.init());
 
     while (!rl.WindowShouldClose()) { // Set ! back to work
         rl.BeginDrawing();
@@ -126,15 +170,21 @@ pub fn main() !void {
             ship.direction = rl.Vector2Scale(ship.direction, ship.speed);
         }
 
-        ship.update();
         rl.ClearBackground(rl.BLACK);
+
+        ship.update();
+        rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
+
+        for (enemies.items) |*enemy| {
+            enemy.update();
+            rl.DrawLineStrip(&enemy.body, enemy.body.len, rl.BLUE);
+        }
+
         rl.DrawRectangleLines(FRAME_OFFSET, FRAME_OFFSET, FRAME_WIDTH, FRAME_HEIGHT, rl.WHITE);
         rl.DrawText("Score : ", WINDOW_WIDTH - MENU_WIDTH + 20, 20, 20, rl.WHITE);
 
         rl.DrawText("FPS : ", WINDOW_WIDTH - MENU_WIDTH + 20, 60, 20, rl.WHITE);
         fps = @intCast(rl.GetFPS());
         rl.DrawText(&uIntToNullTermString(fps)[0], WINDOW_WIDTH - MENU_WIDTH + 80, 60, 20, rl.WHITE);
-
-        rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
     }
 }

@@ -192,7 +192,7 @@ pub fn main() !void {
     var fps: u32 = 0;
 
     var frame_count: u32 = 0;
-    // var enemy_count: u32 = 0;
+    var enemy_count: u32 = 0;
 
     var ship: Ship = undefined;
     ship.init();
@@ -239,12 +239,11 @@ pub fn main() !void {
         rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
 
         if (frame_count % (TARGET_FPS / 12) == 0) { // Spawn an enemy every second
-            // try enemies.append(Enemy.init());
             if (rl.IsKeyDown(rl.KEY_SPACE)) {
                 try projectiles.append(Projectile.initFromShip(&ship));
             }
-            // try enemies.append(Enemy.init());
-            // enemy_count += 1;
+            try enemies.append(Enemy.init());
+            enemy_count += 1;
         }
 
         for (enemies.items) |*enemy| {
@@ -276,6 +275,6 @@ pub fn main() !void {
         rl.DrawText(&uIntToNullTermString(fps)[0], WINDOW_WIDTH - MENU_WIDTH + 80, 60, 20, rl.WHITE);
 
         rl.DrawText("Enemy COUNT : ", WINDOW_WIDTH - MENU_WIDTH + 20, 100, 20, rl.WHITE);
-        // rl.DrawText(&uIntToNullTermString(enemy_count)[0], WINDOW_WIDTH - MENU_WIDTH + 150, 140, 20, rl.WHITE);
+        rl.DrawText(&uIntToNullTermString(enemy_count)[0], WINDOW_WIDTH - MENU_WIDTH + 150, 140, 20, rl.WHITE);
     }
 }

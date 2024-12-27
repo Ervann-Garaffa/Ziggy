@@ -4,12 +4,16 @@ const rl = @cImport({
     @cInclude("raymath.h");
 });
 
+const globAlloc = std.heap.page_allocator;
+const rand = std.crypto.random;
+
 const FRAME_WIDTH = 900;
 const FRAME_HEIGHT = FRAME_WIDTH;
 const FRAME_OFFSET = 20;
 const MENU_WIDTH = 200;
 const WINDOW_WIDTH = FRAME_WIDTH + 2 * FRAME_OFFSET + MENU_WIDTH;
 const WINDOW_HEIGHT = FRAME_HEIGHT + 2 * FRAME_OFFSET;
+const TARGET_FPS = 120;
 
 const Button = struct {
     body: rl.Rectangle,
@@ -96,18 +100,30 @@ const Enemy = struct {
     fn init() Enemy {
         return .{
             .scale = 1,
-            .speed = 2,
-            .rotation = 0,
-            .direction = .{ .x = 1, .y = 1 },
-            .position = .{ .x = 0, .y = 0 },
+            .speed = 1 + rand.float(f32) * 5,
+            .rotation = rand.float(f32) * 2 * rl.PI,
+            .direction = rl.Vector2Normalize(.{ .x = 2 * (0.5 - rand.float(f32)), .y = 2 * (0.5 - rand.float(f32)) }),
+            .position = .{ .x = FRAME_OFFSET + (FRAME_WIDTH * rand.float(f32)), .y = FRAME_OFFSET + (FRAME_HEIGHT * rand.float(f32)) },
             .body = enemy_shape,
         };
+    }
+
+    fn reset(self: *@This()) void {
+        self.scale = 1;
+        self.speed = 1 + rand.float(f32) * 5;
+        self.rotation = rand.float(f32) * 2 * rl.PI;
+        self.direction = rl.Vector2Normalize(.{ .x = 2 * (0.5 - rand.float(f32)), .y = 2 * (0.5 - rand.float(f32)) });
+        self.position = .{ .x = FRAME_OFFSET + (FRAME_WIDTH * rand.float(f32)), .y = FRAME_OFFSET + (FRAME_HEIGHT * rand.float(f32)) };
+        self.body = enemy_shape;
     }
 
     fn update(self: *@This()) void {
         self.position = rl.Vector2Add(self.position, self.direction);
 
         // TODO : Boundaries checking external ?
+        if (self.position.x < FRAME_OFFSET + 5 * self.scale or self.position.x > FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale or self.position.y < FRAME_OFFSET + 5 * self.scale or self.position.y > FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale) {
+            self.reset();
+        }
 
         self.body = enemy_shape;
         transformRLV2Slice(self.body[0..], self.scale, self.rotation, self.position);
@@ -132,10 +148,11 @@ pub fn main() !void {
     rl.SetTraceLogLevel(rl.LOG_NONE);
     rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Hello");
     defer rl.CloseWindow();
-    rl.SetTargetFPS(120);
+    rl.SetTargetFPS(TARGET_FPS);
     var fps: u32 = 0;
 
-    const globAlloc = std.heap.page_allocator;
+    var frame_count: u32 = 0;
+    var enemy_count: u32 = 0;
 
     var ship: Ship = undefined;
     ship.init();
@@ -143,11 +160,11 @@ pub fn main() !void {
     var enemies = std.ArrayList(Enemy).init(globAlloc);
     defer enemies.deinit();
 
-    try enemies.append(Enemy.init());
-
     while (!rl.WindowShouldClose()) { // Set ! back to work
         rl.BeginDrawing();
         defer rl.EndDrawing();
+
+        frame_count += 1;
 
         ship.direction = rl.Vector2Zero();
         if (rl.IsKeyDown(rl.KEY_UP)) {
@@ -175,6 +192,11 @@ pub fn main() !void {
         ship.update();
         rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
 
+        if (frame_count % (TARGET_FPS / 12) == 0) { // Spawn an enemy every second
+            try enemies.append(Enemy.init());
+            enemy_count += 1;
+        }
+
         for (enemies.items) |*enemy| {
             enemy.update();
             rl.DrawLineStrip(&enemy.body, enemy.body.len, rl.BLUE);
@@ -186,5 +208,8 @@ pub fn main() !void {
         rl.DrawText("FPS : ", WINDOW_WIDTH - MENU_WIDTH + 20, 60, 20, rl.WHITE);
         fps = @intCast(rl.GetFPS());
         rl.DrawText(&uIntToNullTermString(fps)[0], WINDOW_WIDTH - MENU_WIDTH + 80, 60, 20, rl.WHITE);
+
+        rl.DrawText("Enemy COUNT : ", WINDOW_WIDTH - MENU_WIDTH + 20, 100, 20, rl.WHITE);
+        rl.DrawText(&uIntToNullTermString(enemy_count)[0], WINDOW_WIDTH - MENU_WIDTH + 150, 140, 20, rl.WHITE);
     }
 }

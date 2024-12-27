@@ -51,7 +51,7 @@ const Ship = struct {
     fn init(self: *@This()) void {
         //self.body = ship_shape;
         self.scale = 2;
-        self.speed = 1;
+        self.speed = 5;
         self.rotation = 0;
         self.direction = .{ .x = 0.0, .y = 0 };
         self.position = .{ .x = 400, .y = 200 };
@@ -123,6 +123,7 @@ pub fn main() !void {
         if (0 == rl.Vector2Equals(ship.direction, rl.Vector2Zero())) {
             ship.direction = rl.Vector2Normalize(ship.direction);
             ship.rotation = rl.Vector2Angle(rl.Vector2{ .x = 1, .y = 0 }, ship.direction);
+            ship.direction = rl.Vector2Scale(ship.direction, ship.speed);
         }
 
         ship.update();

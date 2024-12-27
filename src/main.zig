@@ -130,6 +130,46 @@ const Enemy = struct {
     }
 };
 
+const projectile_shape: [5]rl.Vector2 = .{
+    .{ .x = -5, .y = -1 },
+    .{ .x = -5, .y = 1 },
+    .{ .x = 5, .y = 1 },
+    .{ .x = 5, .y = -1 },
+    .{ .x = -5, .y = -1 },
+};
+
+const Projectile = struct {
+    position: rl.Vector2,
+    direction: rl.Vector2,
+    speed: f32,
+    rotation: f32,
+    scale: f32,
+    body: [5]rl.Vector2,
+
+    fn initFromShip(ship: *const Ship) Projectile {
+        return .{
+            .scale = 2,
+            .speed = 6,
+            .rotation = ship.rotation,
+            .direction = ship.direction,
+            .position = ship.position,
+            .body = projectile_shape,
+        };
+    }
+
+    fn update(self: *@This()) void {
+        self.position = rl.Vector2Add(self.position, self.direction);
+
+        // TODO : Boundaries checking to delete
+        // if (self.position.x < FRAME_OFFSET + 5 * self.scale or self.position.x > FRAME_OFFSET + FRAME_WIDTH - 5 * self.scale or self.position.y < FRAME_OFFSET + 5 * self.scale or self.position.y > FRAME_OFFSET + FRAME_HEIGHT - 5 * self.scale) {
+        //     self.reset();
+        // }
+
+        self.body = projectile_shape;
+        transformRLV2Slice(self.body[0..], self.scale, self.rotation, self.position);
+    }
+};
+
 // YES! Array modification through slices without using a f*cking Allocator! Thanks again Claude
 pub fn transformRLV2Slice(
     points: []rl.Vector2, // Slice called same as an array but with unknown length : slice[0..]
@@ -152,7 +192,7 @@ pub fn main() !void {
     var fps: u32 = 0;
 
     var frame_count: u32 = 0;
-    var enemy_count: u32 = 0;
+    // var enemy_count: u32 = 0;
 
     var ship: Ship = undefined;
     ship.init();
@@ -160,7 +200,13 @@ pub fn main() !void {
     var enemies = std.ArrayList(Enemy).init(globAlloc);
     defer enemies.deinit();
 
-    while (!rl.WindowShouldClose()) { // Set ! back to work
+    var projectiles = std.ArrayList(Projectile).init(globAlloc);
+    defer projectiles.deinit();
+
+    var proj_to_erase = std.ArrayList(usize).init(globAlloc);
+    defer proj_to_erase.deinit();
+
+    while (!rl.WindowShouldClose()) {
         rl.BeginDrawing();
         defer rl.EndDrawing();
 
@@ -193,13 +239,33 @@ pub fn main() !void {
         rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
 
         if (frame_count % (TARGET_FPS / 12) == 0) { // Spawn an enemy every second
-            try enemies.append(Enemy.init());
-            enemy_count += 1;
+            // try enemies.append(Enemy.init());
+            if (rl.IsKeyDown(rl.KEY_SPACE)) {
+                try projectiles.append(Projectile.initFromShip(&ship));
+            }
+            // try enemies.append(Enemy.init());
+            // enemy_count += 1;
         }
 
         for (enemies.items) |*enemy| {
             enemy.update();
             rl.DrawLineStrip(&enemy.body, enemy.body.len, rl.BLUE);
+        }
+
+        proj_to_erase.clearRetainingCapacity();
+        for (projectiles.items, 0..) |*projectile, i| {
+            projectile.update();
+            rl.DrawLineStrip(&projectile.body, projectile.body.len, rl.RED);
+            if (projectile.position.x < FRAME_OFFSET or projectile.position.x > FRAME_OFFSET + FRAME_WIDTH or projectile.position.y < FRAME_OFFSET or projectile.position.y > FRAME_OFFSET + FRAME_HEIGHT) {
+                try proj_to_erase.append(i);
+            }
+        }
+
+        var i: usize = proj_to_erase.items.len;
+        while (i > 0) {
+            i -= 1;
+            const index = proj_to_erase.items[i];
+            _ = projectiles.orderedRemove(index);
         }
 
         rl.DrawRectangleLines(FRAME_OFFSET, FRAME_OFFSET, FRAME_WIDTH, FRAME_HEIGHT, rl.WHITE);
@@ -210,6 +276,6 @@ pub fn main() !void {
         rl.DrawText(&uIntToNullTermString(fps)[0], WINDOW_WIDTH - MENU_WIDTH + 80, 60, 20, rl.WHITE);
 
         rl.DrawText("Enemy COUNT : ", WINDOW_WIDTH - MENU_WIDTH + 20, 100, 20, rl.WHITE);
-        rl.DrawText(&uIntToNullTermString(enemy_count)[0], WINDOW_WIDTH - MENU_WIDTH + 150, 140, 20, rl.WHITE);
+        // rl.DrawText(&uIntToNullTermString(enemy_count)[0], WINDOW_WIDTH - MENU_WIDTH + 150, 140, 20, rl.WHITE);
     }
 }

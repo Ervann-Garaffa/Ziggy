@@ -227,6 +227,10 @@ pub fn main() !void {
         }
 
         // TODO : finish implementing separation between speed and direction
+        // Inputs : => temp_direction => Rotation
+        // Update : => Rotation => Direction(normalized) => Movement (Direction x Speed)
+        // Never calculate ship.direction before rotation
+
         if (0 == rl.Vector2Equals(ship.direction, rl.Vector2Zero())) {
             ship.direction = rl.Vector2Normalize(ship.direction);
             ship.rotation = rl.Vector2Angle(rl.Vector2{ .x = 1, .y = 0 }, ship.direction);

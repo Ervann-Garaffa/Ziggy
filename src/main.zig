@@ -47,6 +47,7 @@ const ship_shape: [6]rl.Vector2 = .{
 const Ship = struct {
     position: rl.Vector2,
     direction: rl.Vector2,
+    base_speed: f32,
     speed: f32,
     rotation: f32,
     scale: f32,
@@ -55,14 +56,18 @@ const Ship = struct {
     fn init(self: *@This()) void {
         //self.body = ship_shape;
         self.scale = 2;
-        self.speed = 5;
-        self.rotation = 0;
+        self.base_speed = 3;
+        self.speed = 3;
+        self.rotation = rl.PI / 2;
         self.direction = .{ .x = 0.0, .y = 0 };
         self.position = .{ .x = 400, .y = 200 };
     }
 
     fn update(self: *@This()) void {
         self.position = rl.Vector2Add(self.position, self.direction);
+        std.debug.print("\nDirection x : {} | y : {}", .{ self.direction.x, self.direction.y });
+
+        // TODO : correct passing direction to projectiles
 
         // Boundaries checking
         if (self.position.x < FRAME_OFFSET + 5 * self.scale) {
@@ -212,18 +217,27 @@ pub fn main() !void {
 
         frame_count += 1;
 
-        ship.direction = rl.Vector2Zero();
+        var x: f32 = 0;
+        var y: f32 = 0;
+
         if (rl.IsKeyDown(rl.KEY_UP)) {
-            ship.direction = rl.Vector2Add(ship.direction, .{ .x = 0, .y = -1 });
+            y -= 1;
         }
         if (rl.IsKeyDown(rl.KEY_DOWN)) {
-            ship.direction = rl.Vector2Add(ship.direction, .{ .x = 0, .y = 1 });
+            y += 1;
         }
         if (rl.IsKeyDown(rl.KEY_RIGHT)) {
-            ship.direction = rl.Vector2Add(ship.direction, .{ .x = 1, .y = 0 });
+            x += 1;
         }
         if (rl.IsKeyDown(rl.KEY_LEFT)) {
-            ship.direction = rl.Vector2Add(ship.direction, .{ .x = -1, .y = 0 });
+            x -= 1;
+        }
+
+        if (x == 0 and y == 0) {
+            ship.speed = 0;
+        } else {
+            ship.speed = ship.base_speed;
+            ship.direction = .{ .x = x, .y = y };
         }
 
         // TODO : finish implementing separation between speed and direction
@@ -240,19 +254,22 @@ pub fn main() !void {
         rl.ClearBackground(rl.BLACK);
 
         ship.update();
-        rl.DrawLineStrip(&ship.body, ship.body.len, rl.WHITE);
+        rl.DrawLineStrip(&ship.body, ship.body.len, rl.BLUE);
 
         if (frame_count % (TARGET_FPS / 12) == 0) { // Spawn an enemy every second
             if (rl.IsKeyDown(rl.KEY_SPACE)) {
                 try projectiles.append(Projectile.initFromShip(&ship));
             }
+        }
+
+        if (frame_count % (TARGET_FPS) == 0) { // Spawn an enemy every second
             try enemies.append(Enemy.init());
             enemy_count += 1;
         }
 
         for (enemies.items) |*enemy| {
             enemy.update();
-            rl.DrawLineStrip(&enemy.body, enemy.body.len, rl.BLUE);
+            rl.DrawLineStrip(&enemy.body, enemy.body.len, rl.WHITE);
         }
 
         proj_to_erase.clearRetainingCapacity();

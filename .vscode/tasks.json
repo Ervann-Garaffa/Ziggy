@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "zig build",
+			"type": "shell",
+			"command": "zig build",
+			"group": "build"
+		},
+		{
+			"label": "zig build run",
+			"type": "shell",
+			"command": "zig build run",
+			"group": "build"
+		},
+		{
+			"label": "zig build run",
+			"type": "shell",
+			"command": "zig build run",
+			"group": "build"
+		},
+		{
+			"label": "zig build run",
+			"type": "shell",
+			"command": "zig build run",
+			"group": "build"
+		}
+	]
+}

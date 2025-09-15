@@ -202,14 +202,14 @@ pub fn main() !void {
     var ship: Ship = undefined;
     ship.init();
 
-    var enemies = std.ArrayList(Enemy).init(globAlloc);
-    defer enemies.deinit();
+    var enemies = std.ArrayList(Enemy){};
+    defer enemies.deinit(globAlloc);
 
-    var projectiles = std.ArrayList(Projectile).init(globAlloc);
-    defer projectiles.deinit();
+    var projectiles = std.ArrayList(Projectile){};
+    defer projectiles.deinit(globAlloc);
 
-    var proj_to_erase = std.ArrayList(usize).init(globAlloc);
-    defer proj_to_erase.deinit();
+    var proj_to_erase = std.ArrayList(usize){};
+    defer proj_to_erase.deinit(globAlloc);
 
     while (!rl.WindowShouldClose()) {
         rl.BeginDrawing();
@@ -258,12 +258,12 @@ pub fn main() !void {
 
         if (frame_count % (TARGET_FPS / 12) == 0) { // Spawn an enemy every second
             if (rl.IsKeyDown(rl.KEY_SPACE)) {
-                try projectiles.append(Projectile.initFromShip(&ship));
+                try projectiles.append(globAlloc, Projectile.initFromShip(&ship));
             }
         }
 
         if (frame_count % (TARGET_FPS) == 0) { // Spawn an enemy every second
-            try enemies.append(Enemy.init());
+            try enemies.append(globAlloc, Enemy.init());
             enemy_count += 1;
         }
 
@@ -277,7 +277,7 @@ pub fn main() !void {
             projectile.update();
             rl.DrawLineStrip(&projectile.body, projectile.body.len, rl.RED);
             if (projectile.position.x < FRAME_OFFSET or projectile.position.x > FRAME_OFFSET + FRAME_WIDTH or projectile.position.y < FRAME_OFFSET or projectile.position.y > FRAME_OFFSET + FRAME_HEIGHT) {
-                try proj_to_erase.append(i);
+                try proj_to_erase.append(globAlloc, i);
             }
         }
 
